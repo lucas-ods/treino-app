@@ -1,5 +1,7 @@
 # Treino
 
+**Abrir o app:** https://lucas-ods.github.io/treino-app/
+
 App web instalável (PWA) para acompanhar treinos de academia no celular. Funciona offline, e os dados ficam salvos no próprio aparelho.
 
 ## Funções
