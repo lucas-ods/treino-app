@@ -1,0 +1,6 @@
+# Arquivos pessoais e locais (não publicar)
+Treinos referencia/
+backup/
+*.json
+!manifest.webmanifest
+.claude/
