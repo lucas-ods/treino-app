@@ -77,6 +77,10 @@ const ICONS = {
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
   shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
   'shield-check': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  'arrow-up-down': '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
+  'alert': '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+  body: '<circle cx="12" cy="4.5" r="2"/><path d="M6 8.5l6 1.5 6-1.5"/><path d="M12 10v5"/><path d="m9 21 3-6 3 6"/>',
   list: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
 };
 const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -141,7 +145,7 @@ function seed() {
 /* =========================================================
    Persistência
    ========================================================= */
-const DEFAULT_SETTINGS = { restOn: true, restSecs: 60, vibrate: true, sound: true, wake: true };
+const DEFAULT_SETTINGS = { restOn: true, restSecs: 60, vibrate: true, sound: true, wake: true, homeView: 'simple' };
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY));
@@ -197,7 +201,7 @@ function sessionsByDay() {
 /* =========================================================
    Navegação (pilha + botão voltar do celular)
    ========================================================= */
-const ui = { stack: [{ view: 'home' }], draft: null, draftOrig: '', calMonth: null, calSel: dkey(Date.now()), log: null };
+const ui = { stack: [{ view: 'home' }], draft: null, draftOrig: '', calMonth: null, calSel: dkey(Date.now()), log: null, sorting: false, libTarget: null };
 const cur = () => ui.stack[ui.stack.length - 1];
 
 function go(view, params = {}) {
@@ -341,17 +345,39 @@ function vHome() {
       <span class="lb-r"><span data-elapsed>${hms(Date.now() - S.active.start)}</span>${ic('chevron-right')}</span>
     </button>` : '';
 
-  const cards = S.workouts.map((w) => {
+  const sorting = ui.sorting;
+  const detailed = S.settings.homeView === 'detailed';
+  const cards = S.workouts.map((w, i) => {
     const st = wStats(w.id);
-    return `<button class="card wcard" data-a="open" data-id="${w.id}" style="--c:${w.color}">
+    const meta = `${w.exercises.length} exercícios · ${st.last ? 'último ' + relDay(st.last) : 'nunca feito'}`;
+    let inner;
+    if (detailed) {
+      const mu = workoutMuscles(w);
+      const musTxt = mu.top.slice(0, 4).map((k) => MUSCLES[k]).join(' · ');
+      inner = `
+      <span class="wc-body">${bodyMap(mu.scores, w.color)}</span>
+      <span class="wc-main">
+        <span class="wc-name">${esc(w.name)}</span>
+        <span class="wc-mus">${musTxt || 'Músculos não reconhecidos'}</span>
+        <span class="wc-meta">${meta}${st.count ? ` · ${st.count}×` : ''}</span>
+      </span>`;
+    } else {
+      inner = `
       <span class="badge">${esc(initials(w.name))}</span>
       <span class="wc-main">
         <span class="wc-name">${esc(w.name)}</span>
-        <span class="wc-meta">${w.exercises.length} exercícios · ${st.last ? 'último ' + relDay(st.last) : 'nunca feito'}</span>
+        <span class="wc-meta">${meta}</span>
       </span>
-      ${st.count ? `<span class="wc-count">${st.count}×</span>` : ''}
-      ${ic('chevron-right', 'chev')}
-    </button>`;
+      ${st.count && !sorting ? `<span class="wc-count">${st.count}×</span>` : ''}`;
+    }
+    if (sorting) {
+      return `<div class="card wcard sorting ${detailed ? 'detailed' : 'simple'}" style="--c:${w.color}">${inner}
+        <span class="sort-btns">
+          <button class="icon-btn sm" data-a="wmove" data-i="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${ic('arrow-up')}</button>
+          <button class="icon-btn sm" data-a="wmove" data-i="${i}" data-d="1" ${i === S.workouts.length - 1 ? 'disabled' : ''} aria-label="Descer">${ic('arrow-down')}</button>
+        </span></div>`;
+    }
+    return `<button class="card wcard ${detailed ? 'detailed' : 'simple'}" data-a="open" data-id="${w.id}" style="--c:${w.color}">${inner}${ic('chevron-right', 'chev')}</button>`;
   }).join('');
 
   return `<div class="screen">
@@ -362,10 +388,16 @@ function vHome() {
       <div class="week-top"><b>Esta semana</b><span><strong>${weekCount}</strong> ${weekCount === 1 ? 'treino' : 'treinos'}</span></div>
       <div class="week">${days}</div>
     </section>
-    <div class="section-title">Treinos <span>${S.workouts.length}</span></div>
+    <div class="section-title">Treinos <span>${S.workouts.length}</span>
+      ${S.workouts.length ? `<span class="view-toggle" role="group" aria-label="Visualização">
+        <button class="${detailed ? '' : 'on'}" data-a="homeview" data-v="simple" aria-label="Visualização simplificada" aria-pressed="${!detailed}">${ic('list')}</button>
+        <button class="${detailed ? 'on' : ''}" data-a="homeview" data-v="detailed" aria-label="Visualização detalhada com mapa muscular" aria-pressed="${detailed}">${ic('body')}</button>
+      </span>` : ''}
+      ${S.workouts.length > 1 ? `<button class="sort-toggle ${sorting ? 'on' : ''}" data-a="sort">${sorting ? `${ic('check')} Concluir` : `${ic('arrow-up-down')} Ordenar`}</button>` : ''}
+    </div>
     ${S.workouts.length ? `<div class="wlist">${cards}</div>` : `<div class="empty">${ic('dumbbell')}<div>Nenhum treino ainda.<br>Toque em <b>Novo treino</b> para criar.</div></div>`}
   </div>
-  <button class="fab" data-a="new">${ic('plus')} Novo treino</button>
+  ${sorting ? '' : `<button class="fab" data-a="new">${ic('plus')} Novo treino</button>`}
   ${tabbar('home')}`;
 }
 
@@ -386,8 +418,15 @@ function vWorkout({ id }) {
   return `<div class="screen" style="--c:${w.color}">
     <div class="topbar">${backBtn()}<div class="grow"></div><button class="icon-btn" data-a="wmenu" data-id="${id}" aria-label="Mais opções">${ic('more')}</button></div>
     <div class="hero">
-      <span class="badge lg">${esc(initials(w.name))}</span>
       <h1 class="h1">${esc(w.name)}</h1>
+      ${(() => {
+        const mu = workoutMuscles(w);
+        return `<div class="card body-card">
+          ${bodyMap(mu.scores, w.color, { labels: true, cls: 'lg' })}
+          <div class="mus-chips">${mu.top.map((k) => `<span class="mus-chip" style="--o:${(0.3 + 0.7 * mu.scores[k]).toFixed(2)}">${MUSCLES[k]}</span>`).join('') || '<span class="sub">Nenhum exercício reconhecido</span>'}</div>
+          ${mu.known < mu.total ? `<div class="body-note">${ic('alert')} ${mu.total - mu.known} ${mu.total - mu.known === 1 ? 'exercício não reconhecido' : 'exercícios não reconhecidos'} (sem ilustração)</div>` : ''}
+        </div>`;
+      })()}
       <div class="meta-row">
         <span class="pill">${ic('list')} ${w.exercises.length} exercícios</span>
         <span class="pill">${ic('flame')} ${st.count} ${st.count === 1 ? 'vez' : 'vezes'}</span>
@@ -492,6 +531,71 @@ function restHTML() {
 }
 
 /* ----- Editor ----- */
+function exIndicator(e, i) {
+  const il = illusFor(e);
+  if (il) return `<span class="ex-thumb sm">${illusSvg(il)}</span><span class="t">${i + 1}</span>`;
+  return `<span class="ex-n">${i + 1}</span><span class="t${e.name.trim() ? ' warn' : ''}">${e.name.trim() ? 'Sem ilustração' : 'Exercício'}</span>`;
+}
+const LIB_GROUPS = [
+  ['Peito', ['chest']], ['Costas', ['lats', 'traps', 'lower_back']], ['Ombros', ['shoulders', 'rear_delts']],
+  ['Braços', ['biceps', 'triceps', 'forearms']], ['Pernas', ['quads', 'hamstrings', 'glutes', 'calves', 'adductors', 'abductors']],
+  ['Abdômen e core', ['abs', 'obliques']],
+];
+function libItem(x, action, extra = '') {
+  const idx = EXERCISE_LIB.indexOf(x);
+  const mus = x.mk ? x.mk.p.map((k) => MUSCLES[k]).join(' · ') : '';
+  return `<button class="lib-item" data-a="${action}" data-v="${idx}" ${extra}>
+    <span class="ex-thumb sm">${illusSvg(x)}</span>
+    <span class="li-main"><b>${esc(x.label)}</b><span>${x.defEq ? `${esc(x.defEq)} · ` : ''}${mus}</span></span>
+  </button>`;
+}
+function suggHTML(i, q) {
+  const words = normName(q);
+  if (!words) return '';
+  const lib = searchExercises(q).slice(0, 6);
+  const exact = lib.length === 1 && normName(lib[0].label) === words;
+  if (exact) return '';
+  const items = lib.map((x) => libItem(x, 'pickex', `data-i="${i}"`)).join('');
+  return items
+    ? `<div class="sugg-box">${items}</div>`
+    : `<div class="sugg-box empty">${ic('alert')}<span>Nenhum exercício com ilustração com esse nome. Você pode usar mesmo assim ou procurar na <button class="lbl-link" data-a="libpick" data-i="${i}">biblioteca</button>.</span></div>`;
+}
+function libListHTML(q) {
+  const res = searchExercises(q);
+  if (!res.length) return '<div class="empty-day">Nada encontrado. Use “Criar exercício sem ilustração”.</div>';
+  if (normName(q)) return res.map((x) => libItem(x, 'sheet-pick')).join('');
+  return LIB_GROUPS.map(([title, keys]) => {
+    const xs = res.filter((x) => x.mk && keys.includes(x.mk.p[0]));
+    return xs.length ? `<div class="lib-group">${title}</div>${xs.map((x) => libItem(x, 'sheet-pick')).join('')}` : '';
+  }).join('');
+}
+function applyLib(e, x) {
+  e.name = x.label;
+  e.equip = x.defEq || '';
+  if (x.type === 'time') { e.type = 'time'; e.secs = x.secs || 60; }
+  else if (e.type === 'time') { e.type = 'reps'; e.reps = e.reps || 10; }
+}
+function openLibrary(target) {
+  ui.libTarget = target;
+  openSheet(`<h3>Escolher exercício</h3>
+    <div class="lib-search">${ic('search')}<input class="text-in" data-f="libq" placeholder="Buscar: supino, rosca, perna..." autocomplete="off" autocorrect="off" spellcheck="false"></div>
+    <div id="liblist" class="lib-list">${libListHTML('')}</div>
+    <div class="sheet-actions"><button class="btn btn-secondary" data-a="sheet-pick" data-v="custom">${ic('pencil')} Criar exercício sem ilustração</button></div>`,
+  (r) => {
+    if (r == null) return;
+    const d = ui.draft;
+    if (!d) return;
+    let i = ui.libTarget;
+    if (i === 'new') { d.exercises.push(mkEx('', '', 3, 10)); i = d.exercises.length - 1; }
+    if (r !== 'custom') applyLib(d.exercises[i], EXERCISE_LIB[+r]);
+    render();
+    const inp = document.querySelector(`[data-f="exname"][data-i="${i}"]`);
+    if (inp) {
+      inp.closest('.exedit')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (r === 'custom') inp.focus({ preventScroll: true });
+    }
+  });
+}
 function exEditor(e, i, n) {
   const chips = EQUIP.map((q) => `<button class="chip ${e.equip === q ? 'on' : ''}" data-a="equip" data-i="${i}" data-v="${esc(q)}">${q || 'Peso corporal'}</button>`).join('');
   const st = (k, label, val, input) => `<div class="st"><span class="lbl">${label}</span>
@@ -503,12 +607,14 @@ function exEditor(e, i, n) {
   const restLabel = `Descanso ${e.rest != null ? `<button class="lbl-link" data-a="restreset" data-i="${i}">usar padrão</button>` : ''}`;
   return `<section class="card exedit">
     <div class="exe-head">
-      <span class="ex-n">${i + 1}</span><span class="t">Exercício</span>
+      <span class="exi" id="exi-${i}">${exIndicator(e, i)}</span>
+      <button class="lib-btn" data-a="libpick" data-i="${i}">${ic('search')} Biblioteca</button>
       <button class="icon-btn sm" data-a="exmove" data-i="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Mover para cima">${ic('arrow-up')}</button>
       <button class="icon-btn sm" data-a="exmove" data-i="${i}" data-d="1" ${i === n - 1 ? 'disabled' : ''} aria-label="Mover para baixo">${ic('arrow-down')}</button>
       <button class="icon-btn sm danger" data-a="exdel" data-i="${i}" aria-label="Remover exercício">${ic('trash')}</button>
     </div>
-    <input class="text-in" data-f="exname" data-i="${i}" value="${esc(e.name)}" placeholder="Nome do exercício" list="exnames" autocomplete="off">
+    <input class="text-in" data-f="exname" data-i="${i}" value="${esc(e.name)}" placeholder="Digite para buscar o exercício" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="sugg" id="sugg-${i}"></div>
     <div class="chips">${chips}</div>
     <div class="seg">
       <button class="${e.type === 'reps' ? 'on' : ''}" data-a="extype" data-i="${i}" data-v="reps">Repetições</button>
@@ -524,7 +630,6 @@ function exEditor(e, i, n) {
 function vEdit() {
   const d = ui.draft;
   const isNew = !getW(d.id);
-  const names = [...new Set(S.workouts.flatMap((w) => w.exercises.map((e) => e.name)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   return `<div class="screen has-sticky">
     <header class="edit-head">
       <button class="txt-btn" data-a="editcancel">Cancelar</button>
@@ -539,7 +644,6 @@ function vEdit() {
     ${d.exercises.map((e, i) => exEditor(e, i, d.exercises.length)).join('')}
     <button class="add-ex" data-a="addex">${ic('plus')} Adicionar exercício</button>
     ${!isNew ? `<button class="link-danger" data-a="delw">${ic('trash')} Excluir treino</button>` : ''}
-    <datalist id="exnames">${names.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
   </div>`;
 }
 
@@ -966,12 +1070,16 @@ const A = {
     render();
   },
   exdel: (el) => { ui.draft.exercises.splice(+el.dataset.i, 1); render(); },
-  addex: () => {
-    ui.draft.exercises.push(mkEx('', '', 3, 10));
-    render();
-    const inputs = document.querySelectorAll('[data-f="exname"]');
-    const last = inputs[inputs.length - 1];
-    if (last) { last.scrollIntoView({ behavior: 'smooth', block: 'center' }); last.focus({ preventScroll: true }); }
+  addex: () => openLibrary('new'),
+  libpick: (el) => openLibrary(+el.dataset.i),
+  pickex: (el) => { applyLib(dEx(el), EXERCISE_LIB[+el.dataset.v]); render(); },
+  sort: () => { ui.sorting = !ui.sorting; render(); },
+  homeview: (el) => { S.settings.homeView = el.dataset.v; save(); render(); },
+  wmove: (el) => {
+    const i = +el.dataset.i, j = i + +el.dataset.d, ws = S.workouts;
+    if (j < 0 || j >= ws.length) return;
+    [ws[i], ws[j]] = [ws[j], ws[i]];
+    save(); render();
   },
   editsave: () => {
     const d = sanitizeDraft(clone(ui.draft));
@@ -1143,7 +1251,15 @@ async function deleteWorkout(id) {
 /* Inputs */
 const F = {
   name: (el) => { ui.draft.name = el.value; },
-  exname: (el) => { dEx(el).name = el.value; },
+  exname: (el) => {
+    const i = +el.dataset.i, e = dEx(el);
+    e.name = el.value;
+    const ind = document.getElementById(`exi-${i}`);
+    if (ind) ind.innerHTML = exIndicator(e, i);
+    const sg = document.getElementById(`sugg-${i}`);
+    if (sg) sg.innerHTML = suggHTML(i, el.value);
+  },
+  libq: (el) => { const l = document.getElementById('liblist'); if (l) l.innerHTML = libListHTML(el.value); },
   exnum: (el) => { dEx(el)[el.dataset.k] = el.value.replace(/\D/g, ''); },
   kg: (el) => { exAt(el).sets[+el.dataset.si].kg = el.value.replace(/[^\d.,]/g, ''); save(); },
   reps: (el) => { exAt(el).sets[+el.dataset.si].reps = el.value.replace(/\D/g, ''); save(); },
@@ -1166,7 +1282,19 @@ document.addEventListener('input', (ev) => {
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter' && ev.target.classList?.contains('inp')) ev.target.blur();
 });
+document.addEventListener('pointerdown', (ev) => {
+  if (ev.target.closest('.sugg')) ev.preventDefault(); // mantém o foco no campo para o toque contar
+});
+document.addEventListener('focusout', (ev) => {
+  if (ev.target.dataset?.f !== 'exname') return;
+  const sg = document.getElementById(`sugg-${ev.target.dataset.i}`);
+  setTimeout(() => { if (sg && document.activeElement !== ev.target) sg.innerHTML = ''; }, 150);
+});
 document.addEventListener('focusin', (ev) => {
+  if (ev.target.dataset?.f === 'exname') {
+    const sg = document.getElementById(`sugg-${ev.target.dataset.i}`);
+    if (sg && !illusFor(dEx(ev.target))) sg.innerHTML = suggHTML(+ev.target.dataset.i, ev.target.value);
+  }
   if (ev.target.classList?.contains('inp')) setTimeout(() => ev.target.select?.(), 0);
 });
 $('#importfile').addEventListener('change', async (ev) => {

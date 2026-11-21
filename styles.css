@@ -333,3 +333,55 @@ button.ex-row { width: 100%; text-align: left; }
 .data-card span span { font-size: 13px; color: var(--muted); }
 .data-card .dc-p { margin-top: 6px; font-size: 12.5px; color: var(--faint) !important; }
 .data-card.ok .dc-ic { background: var(--accent-soft); color: var(--accent); }
+
+/* ---------- Mapa muscular ---------- */
+.body .sil { fill: #262a32; }
+.body .m { fill: #343944; stroke: #1b1e24; stroke-width: .5; }
+.body .m.on { fill: var(--mc); }
+.body .ml { fill: none; stroke: #1b1e24; stroke-width: .6; stroke-linecap: round; }
+.body .bl { fill: var(--faint); font-size: 9px; font-weight: 700; text-anchor: middle; font-family: var(--font); letter-spacing: .05em; text-transform: uppercase; }
+.wcard { align-items: center; gap: 12px; padding: 10px 12px 10px 8px; }
+.wc-body { width: 78px; height: 81px; flex: none; display: grid; place-items: center; }
+.wc-body .body { width: 100%; height: 100%; }
+.wc-mus { font-size: 13px; color: var(--c); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wcard.sorting { border-style: dashed; }
+.sort-btns { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.sort-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.sort-toggle svg.i { width: 15px; height: 15px; }
+.sort-toggle.on { background: var(--accent); color: var(--accent-ink); }
+.body-card { margin-top: 16px; padding: 16px 12px 14px; }
+.body-card .body.lg { display: block; width: 100%; max-width: 320px; height: auto; margin: 0 auto; }
+.mus-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+.mus-chip { padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--c); background: color-mix(in srgb, var(--c) calc(var(--o) * 22%), transparent); border: 1px solid color-mix(in srgb, var(--c) calc(var(--o) * 50%), transparent); }
+.body-note { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.body-note svg.i { width: 15px; height: 15px; color: #ffb84d; }
+
+/* ---------- Biblioteca / sugestões ---------- */
+.exi { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.exi .t.warn { color: #ffb84d; }
+.lib-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px; border-radius: 10px; background: var(--surface-2); color: var(--accent); font-size: 12.5px; font-weight: 700; flex: none; }
+.lib-btn svg.i { width: 15px; height: 15px; }
+.sugg-box { margin-top: 6px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); overflow: hidden; }
+.sugg-box .lib-item { border-bottom: 1px solid var(--line); border-radius: 0; }
+.sugg-box .lib-item:last-child { border-bottom: 0; }
+.sugg-box.empty { display: flex; gap: 10px; padding: 12px; font-size: 13px; color: var(--muted); align-items: flex-start; }
+.sugg-box.empty svg.i { width: 18px; height: 18px; color: #ffb84d; flex: none; }
+.lib-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; text-align: left; border-radius: 14px; }
+.lib-item:active { background: var(--surface-3); }
+.li-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.li-main b { font-size: 15px; font-weight: 650; }
+.li-main span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-search { position: relative; margin-bottom: 8px; }
+.lib-search svg.i { position: absolute; left: 14px; top: 15px; color: var(--faint); }
+.lib-search .text-in { padding-left: 42px; }
+.lib-list { max-height: 52dvh; overflow-y: auto; margin: 0 -6px 12px; padding: 0 6px; }
+.lib-group { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin: 14px 4px 4px; }
+.exi .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Alternar visualização da tela inicial ---------- */
+.view-toggle { margin-left: auto; display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface-2); }
+.view-toggle button { width: 34px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--muted); }
+.view-toggle button svg.i { width: 16px; height: 16px; }
+.view-toggle button.on { background: var(--surface-3); color: var(--accent); }
+.view-toggle + .sort-toggle { margin-left: 6px; }
+.wcard.simple { padding: 14px; gap: 14px; }

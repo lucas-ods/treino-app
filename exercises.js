@@ -501,6 +501,50 @@
     },
   ];
 
+  /* ---------- Nome de exibição, equipamento padrão e músculos (p = principal, s = secundário) ---------- */
+  const META = {
+    'rosca biceps|': ['Rosca bíceps', 'Haltere', { p: ['biceps'], s: ['forearms'] }],
+    'supino|Haltere': ['Supino', 'Haltere', { p: ['chest'], s: ['triceps', 'shoulders'] }],
+    'supino|Barra': ['Supino', 'Barra', { p: ['chest'], s: ['triceps', 'shoulders'] }],
+    'supino inclinado|': ['Supino inclinado', 'Haltere', { p: ['chest', 'shoulders'], s: ['triceps'] }],
+    'crucifixo no banco inclinado|': ['Crucifixo no banco inclinado', 'Haltere', { p: ['chest'], s: ['shoulders'] }],
+    'desenvolvimento sentado|Haltere': ['Desenvolvimento sentado', 'Haltere', { p: ['shoulders'], s: ['triceps', 'traps'] }],
+    'desenvolvimento sentado|Aparelho': ['Desenvolvimento sentado', 'Aparelho', { p: ['shoulders'], s: ['triceps', 'traps'] }],
+    'elevacao frontal|': ['Elevação frontal', 'Haltere', { p: ['shoulders'], s: [] }],
+    'elevacao lateral|': ['Elevação lateral', 'Haltere', { p: ['shoulders'], s: ['traps'] }],
+    'triceps frances|': ['Tríceps francês', 'Haltere', { p: ['triceps'], s: [] }],
+    'triceps testa no banco|': ['Tríceps testa no banco', 'Haltere', { p: ['triceps'], s: [] }],
+    'abdominal|': ['Abdominal', '', { p: ['abs'], s: [] }],
+    'abdominal sit-up com rotacao|': ['Abdominal sit-up com rotação', '', { p: ['abs', 'obliques'], s: [] }],
+    'pullover|': ['Pullover', 'Haltere', { p: ['lats', 'chest'], s: ['triceps'] }],
+    'remada curvada|': ['Remada curvada', 'Haltere', { p: ['lats', 'traps'], s: ['biceps', 'rear_delts', 'lower_back'] }],
+    'crucifixo inverso|': ['Crucifixo inverso', 'Haltere', { p: ['rear_delts', 'traps'], s: [] }],
+    'rosca concentrada|': ['Rosca concentrada', 'Haltere', { p: ['biceps'], s: [] }],
+    'agachamento no hack|': ['Agachamento no hack', 'Aparelho', { p: ['quads', 'glutes'], s: ['hamstrings', 'adductors'] }],
+    'leg press|': ['Leg Press', 'Aparelho', { p: ['quads', 'glutes'], s: ['hamstrings', 'adductors'] }],
+    'flexao da panturrilha sentado|': ['Flexão da panturrilha sentado', 'Aparelho', { p: ['calves'], s: [] }],
+    'extensao da perna|': ['Extensão da perna', 'Aparelho', { p: ['quads'], s: [] }],
+    'flexao de pernas sentado|': ['Flexão de pernas sentado', 'Aparelho', { p: ['hamstrings'], s: ['calves'] }],
+    'abdutor de quadril sentado|': ['Abdutor de quadril sentado', 'Aparelho', { p: ['abductors', 'glutes'], s: [] }],
+    'adutor de quadril sentado|': ['Adutor de quadril sentado', 'Aparelho', { p: ['adductors'], s: [] }],
+    'puxada para baixo lateral (pegada aberta)|': ['Puxada para baixo lateral (pegada aberta)', 'Cabo', { p: ['lats'], s: ['biceps', 'rear_delts', 'traps'] }],
+    'remada sentado|': ['Remada sentado', 'Cabo', { p: ['lats', 'traps'], s: ['biceps', 'rear_delts'] }],
+    'rosca scott|': ['Rosca Scott', 'Aparelho', { p: ['biceps'], s: ['forearms'] }],
+    'extensao de triceps|': ['Extensão de tríceps', 'Aparelho', { p: ['triceps'], s: [] }],
+    'abdominal sentado|': ['Abdominal sentado', 'Aparelho', { p: ['abs'], s: [] }],
+    'prancha|': ['Prancha', '', { p: ['abs'], s: ['obliques', 'shoulders', 'lower_back'] }, 60],
+    'prancha lateral|': ['Prancha lateral', '', { p: ['obliques'], s: ['abs', 'shoulders'] }, 30],
+    'flexao|': ['Flexão', '', { p: ['chest', 'triceps'], s: ['shoulders', 'abs'] }],
+    'elevacao das pernas deitado|': ['Elevação das pernas deitado', '', { p: ['abs'], s: ['quads'] }],
+    'torcao russa|': ['Torção russa', 'Haltere', { p: ['obliques'], s: ['abs'] }, 60],
+  };
+  for (const x of LIB) {
+    const m = META[`${x.names[0]}|${x.equip || ''}`];
+    if (!m) { console.warn('Sem META:', x.names[0]); continue; }
+    [x.label, x.defEq, x.mk] = m;
+    if (m[3]) { x.type = 'time'; x.secs = m[3]; }
+  }
+
   /* ---------- API ---------- */
   const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   const cache = new Map();
@@ -514,6 +558,20 @@
     const { vb, inner } = cache.get(il);
     return `<svg class="illus ${cls}" viewBox="${vb}" aria-hidden="true">${inner}</svg>`;
   }
+  /** Busca na biblioteca: todas as palavras digitadas precisam aparecer no nome ou apelidos */
+  function searchExercises(q) {
+    const words = norm(q).split(' ').filter(Boolean);
+    if (!words.length) return LIB.slice();
+    return LIB.map((x) => {
+      const hay = norm([x.label, x.defEq, ...x.names].join(' '));
+      if (!words.every((w) => hay.includes(w))) return null;
+      const lab = norm(x.label);
+      const score = lab.startsWith(words.join(' ')) ? 0 : lab.split(' ').some((t) => t.startsWith(words[0])) ? 1 : 2;
+      return { x, score };
+    }).filter(Boolean).sort((a, b) => a.score - b.score || a.x.label.localeCompare(b.x.label, 'pt-BR')).map((r) => r.x);
+  }
+  window.normName = norm;
+  window.searchExercises = searchExercises;
   window.illusFor = illusFor;
   window.illusSvg = illusSvg;
   window.EXERCISE_LIB = LIB;

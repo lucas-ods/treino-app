@@ -1,6 +1,6 @@
 // Service worker: funciona offline e atualiza em segundo plano.
-const CACHE = 'treino-v4';
-const ASSETS = ['./', './index.html', './styles.css', './app.js', './exercises.js', './manifest.webmanifest',
+const CACHE = 'treino-v6';
+const ASSETS = ['./', './index.html', './styles.css', './app.js', './exercises.js', './body.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
