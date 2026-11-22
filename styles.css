@@ -201,7 +201,7 @@ svg.chev { width: 18px; height: 18px; color: var(--faint); }
 .seg button { flex: 1; height: 36px; border-radius: 10px; font-weight: 700; font-size: 14px; color: var(--muted); }
 .seg button.on { background: var(--surface-3); color: var(--text); }
 .st-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 14px; }
-.st-grid .st:last-child { grid-column: 1 / -1; }
+/* (grade 2x2 no editor) */
 .stepper { display: flex; min-width: 0; align-items: center; background: var(--surface-2); border-radius: 14px; height: 46px; }
 .stepper > button { width: 44px; height: 46px; display: grid; place-items: center; color: var(--muted); flex: none; }
 .stepper > button:active { color: var(--accent); }
@@ -385,3 +385,23 @@ button.ex-row { width: 100%; text-align: left; }
 .view-toggle button.on { background: var(--surface-3); color: var(--accent); }
 .view-toggle + .sort-toggle { margin-left: 6px; }
 .wcard.simple { padding: 14px; gap: 14px; }
+
+/* ---------- Ajuste de descanso / alterações no treino ---------- */
+.lbl-sub { font-size: 11px; color: var(--faint); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.rs-item { padding: 12px 4px; border-bottom: 0; }
+.rs-box { margin: 6px 0 14px; transition: opacity .2s; }
+.rs-box.off { opacity: .4; pointer-events: none; }
+.rs-stepper { height: 54px; }
+.rs-stepper > span { font-size: 22px; }
+.rs-chips { flex-wrap: wrap; margin: 12px 0 0; padding: 0; }
+.chg-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; max-height: 46dvh; overflow-y: auto; }
+.chg { display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 12px; border-radius: 14px; background: var(--surface-2); text-align: left; border: 1.5px solid transparent; }
+.chg.on { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.chg-box { width: 22px; height: 22px; border-radius: 7px; flex: none; display: grid; place-items: center; background: var(--surface-3); color: transparent; margin-top: 1px; }
+.chg.on .chg-box { background: var(--accent); color: var(--accent-ink); }
+.chg-box svg.i { width: 15px; height: 15px; stroke-width: 3; }
+.chg-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.chg-main b { font-size: 15px; }
+.chg-items { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--muted); }
+.chg-items s { color: var(--faint); }
+.chg-items strong { color: var(--accent); }

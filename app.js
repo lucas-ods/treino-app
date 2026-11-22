@@ -44,8 +44,9 @@ function initials(name) {
   return (w[0] || '?').slice(0, 2).toUpperCase();
 }
 function targetTxt(e) {
-  if (e.type === 'time') return `${e.sets} × ${mmss(e.secs)}`;
-  return e.reps ? `${e.sets} × ${e.reps} reps` : `${e.sets} séries`;
+  const kg = e.kg ? ` · ${fmtN(e.kg)} kg` : '';
+  if (e.type === 'time') return `${e.sets} × ${mmss(e.secs)}${kg}`;
+  return (e.reps ? `${e.sets} × ${e.reps} reps` : `${e.sets} séries`) + kg;
 }
 
 /* Ícones (traços no estilo Lucide) */
@@ -145,13 +146,16 @@ function seed() {
 /* =========================================================
    Persistência
    ========================================================= */
-const DEFAULT_SETTINGS = { restOn: true, restSecs: 60, vibrate: true, sound: true, wake: true, homeView: 'simple' };
+const DEFAULT_SETTINGS = { restOn: true, restSecs: 30, vibrate: true, sound: true, wake: true, homeView: 'simple' };
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY));
     if (d && Array.isArray(d.workouts)) {
       d.sessions = d.sessions || [];
-      d.settings = { ...DEFAULT_SETTINGS, ...(d.settings || {}) };
+      const old = d.settings || {};
+      if (!old.restMigrated && old.restSecs === 60) old.restSecs = 30; // novo padrão
+      old.restMigrated = true;
+      d.settings = { ...DEFAULT_SETTINGS, ...old };
       d.active = d.active || null;
       d.backup = d.backup || { last: null, snooze: null };
       return d;
@@ -450,6 +454,7 @@ function progress(a) {
 }
 function phKg(e, si) {
   for (let j = si - 1; j >= 0; j--) if (e.sets[j].kg !== '') return String(e.sets[j].kg);
+  if (e.target.kg) return fmtN(e.target.kg);
   const p = e.prev?.[si] || e.prev?.[e.prev.length - 1];
   return p?.kg ? fmtN(p.kg) : '';
 }
@@ -502,7 +507,7 @@ function vActive() {
       <div class="lh-row">
         ${backBtn('chevron-down')}
         <div class="lh-c"><div class="lh-name">${esc(a.name)}</div><div class="lh-time" data-elapsed>${hms(Date.now() - a.start)}</div></div>
-        <button class="icon-btn ${S.settings.restOn ? 'on' : ''}" data-a="togglerest" aria-label="Descanso automático">${ic(S.settings.restOn ? 'bell' : 'bell-off')}</button>
+        <button class="icon-btn ${S.settings.restOn ? 'on' : ''}" data-a="restsheet" aria-label="Ajustar descanso">${ic(S.settings.restOn ? 'bell' : 'bell-off')}</button>
         <button class="btn-finish" data-a="finish">Finalizar</button>
       </div>
       <div class="prog"><div style="width:${total ? (done / total) * 100 : 0}%"></div></div>
@@ -601,10 +606,11 @@ function exEditor(e, i, n) {
   const st = (k, label, val, input) => `<div class="st"><span class="lbl">${label}</span>
     <div class="stepper">
       <button data-a="step" data-i="${i}" data-k="${k}" data-d="-1" aria-label="Diminuir">${ic('minus')}</button>
-      ${input ? `<input class="step-in" inputmode="numeric" data-f="exnum" data-i="${i}" data-k="${k}" value="${val ?? ''}" placeholder="—">` : `<span>${val}</span>`}
+      ${input === 'kg' ? `<input class="step-in" inputmode="decimal" data-f="exkg" data-i="${i}" value="${val}" placeholder="—">`
+        : input ? `<input class="step-in" inputmode="numeric" data-f="exnum" data-i="${i}" data-k="${k}" value="${val ?? ''}" placeholder="—">` : `<span>${val}</span>`}
       <button data-a="step" data-i="${i}" data-k="${k}" data-d="1" aria-label="Aumentar">${ic('plus')}</button>
     </div></div>`;
-  const restLabel = `Descanso ${e.rest != null ? `<button class="lbl-link" data-a="restreset" data-i="${i}">usar padrão</button>` : ''}`;
+  const restLabel = `Descanso ${e.rest != null ? `<button class="lbl-link" data-a="restreset" data-i="${i}">↺ padrão</button>` : '<span class="lbl-sub">padrão</span>'}`;
   return `<section class="card exedit">
     <div class="exe-head">
       <span class="exi" id="exi-${i}">${exIndicator(e, i)}</span>
@@ -623,7 +629,8 @@ function exEditor(e, i, n) {
     <div class="st-grid">
       ${st('sets', 'Séries', e.sets, true)}
       ${e.type === 'time' ? st('secs', 'Tempo', mmss(e.secs), false) : st('reps', 'Reps', e.reps, true)}
-      ${st('rest', restLabel, e.rest == null ? `Padrão (${secsTxt(S.settings.restSecs)})` : secsTxt(e.rest), false)}
+      ${st('kg', 'Carga (kg)', e.kg == null ? '' : fmtN(e.kg), 'kg')}
+      ${st('rest', restLabel, secsTxt(e.rest ?? S.settings.restSecs), false)}
     </div>
   </section>`;
 }
@@ -767,7 +774,7 @@ function vSettings() {
     <div class="card list" style="margin-top:0">
       ${sw('restOn', 'Descanso automático', 'Inicia ao concluir uma série')}
       <div class="item"><span><span class="it-t">Tempo padrão</span><span class="it-d">Ajustável por exercício</span></span>
-        <div class="stepper sm"><button data-a="restdefault" data-d="-15" aria-label="Diminuir">${ic('minus')}</button><span>${secsTxt(st.restSecs)}</span><button data-a="restdefault" data-d="15" aria-label="Aumentar">${ic('plus')}</button></div></div>
+        <div class="stepper sm"><button data-a="restdefault" data-d="-1" aria-label="Diminuir">${ic('minus')}</button><span>${secsTxt(st.restSecs)}</span><button data-a="restdefault" data-d="1" aria-label="Aumentar">${ic('plus')}</button></div></div>
       ${sw('vibrate', 'Vibrar ao terminar', canVibrate ? '' : 'Este aparelho/navegador não suporta vibração')}
       ${sw('sound', 'Som ao terminar', 'Três bipes curtos')}
     </div>
@@ -817,7 +824,7 @@ function newActive(w) {
     workoutId: w.id, name: w.name, start: Date.now(), rest: null, timer: null,
     exercises: w.exercises.map((e) => ({
       id: e.id, name: e.name, equip: e.equip, type: e.type,
-      target: { reps: e.reps, secs: e.secs }, rest: e.rest, prev: prevFor(e),
+      target: { reps: e.reps, secs: e.secs, kg: e.kg ?? null, sets: e.sets }, rest: e.rest, prev: prevFor(e),
       sets: Array.from({ length: Math.max(1, e.sets) }, () => ({ kg: '', reps: '', secs: 0, done: false })),
     })),
   };
@@ -827,6 +834,24 @@ function fillSet(e, si) {
   if (s.kg === '') s.kg = phKg(e, si);
   if (e.type === 'reps' && s.reps === '') s.reps = phReps(e, si);
   if (e.type === 'time' && !s.secs) s.secs = e.target.secs;
+}
+function restSheetHTML() {
+  const st = S.settings;
+  const presets = [15, 30, 45, 60, 90, 120];
+  return `<h3>Descanso entre séries</h3>
+    <p>Começa sozinho ao concluir uma série. Exercícios com descanso próprio (definido no editor) mantêm o tempo deles.</p>
+    <button class="item rs-item" data-a="rs-toggle" role="switch" aria-checked="${st.restOn}">
+      <span><span class="it-t">Descanso automático</span></span><span class="switch ${st.restOn ? 'on' : ''}"></span></button>
+    <div class="rs-box ${st.restOn ? '' : 'off'}">
+      <span class="lbl">Tempo padrão</span>
+      <div class="stepper rs-stepper">
+        <button data-a="rs-step" data-d="-5" aria-label="Menos 5 segundos">${ic('minus')}</button>
+        <span>${secsTxt(st.restSecs)}</span>
+        <button data-a="rs-step" data-d="5" aria-label="Mais 5 segundos">${ic('plus')}</button>
+      </div>
+      <div class="chips rs-chips">${presets.map((v) => `<button class="chip ${st.restSecs === v ? 'on' : ''}" data-a="rs-set" data-v="${v}">${secsTxt(v)}</button>`).join('')}</div>
+    </div>
+    <div class="sheet-actions"><button class="btn btn-primary" data-a="sheet-close">Pronto</button></div>`;
 }
 function startRest(e) {
   const a = S.active;
@@ -962,6 +987,12 @@ async function finishWorkout() {
     ok: 'Finalizar e salvar', cancel: 'Continuar treinando',
   });
   if (!ok) return;
+  const changes = planChanges(a);
+  if (changes.length) {
+    ui.changes = changes;
+    const apply = await new Promise((res) => openSheet(changesHTML(), (r) => res(r === 'apply')));
+    if (apply) applyPlanChanges(a.workoutId, ui.changes.filter((c) => c.on));
+  }
   const s = buildSession(a);
   S.sessions.push(s);
   S.active = null;
@@ -970,6 +1001,63 @@ async function finishWorkout() {
   releaseWake();
   ui.calSel = dkey(s.start);
   setRoot([{ view: 'home' }, { view: 'summary', id: s.id }]);
+}
+/* Compara o que foi feito com o treino salvo (carga, repetições e número de séries) */
+function mode(arr) {
+  const c = new Map();
+  for (const v of arr) c.set(v, (c.get(v) || 0) + 1);
+  let best = null, n = 0;
+  for (const [v, k] of c) if (k > n || (k === n && v > best)) { best = v; n = k; }
+  return best;
+}
+function planChanges(a) {
+  const w = getW(a.workoutId);
+  if (!w) return [];
+  const out = [];
+  for (const e of a.exercises) {
+    const te = w.exercises.find((x) => x.id === e.id);
+    if (!te) continue;
+    const done = e.sets.filter((x) => x.done);
+    if (!done.length) continue;
+    const kgs = done.map((x) => num(x.kg)).filter((v) => v > 0);
+    const kg = kgs.length ? Math.max(...kgs) : null;
+    const reps = e.type === 'reps' ? mode(done.map((x) => num(x.reps)).filter((v) => v > 0)) : null;
+    const c = { id: e.id, name: e.name, on: true, items: [] };
+    if (kg !== null && kg !== (te.kg ?? null)) c.items.push({ k: 'kg', from: te.kg ?? null, to: kg });
+    if (reps !== null && reps !== (te.reps ?? null)) c.items.push({ k: 'reps', from: te.reps ?? null, to: reps });
+    if (e.sets.length !== te.sets) c.items.push({ k: 'sets', from: te.sets, to: e.sets.length });
+    if (c.items.length) out.push(c);
+  }
+  return out;
+}
+function changesHTML() {
+  const lbl = { kg: 'Carga', reps: 'Reps', sets: 'Séries' };
+  const fmt = (k, v) => (v == null ? '—' : k === 'kg' ? `${fmtN(v)} kg` : String(v));
+  const rows = ui.changes.map((c, i) => `
+    <button class="chg ${c.on ? 'on' : ''}" data-a="chg-toggle" data-i="${i}" role="checkbox" aria-checked="${c.on}">
+      <span class="chg-box">${ic('check')}</span>
+      <span class="chg-main"><b>${esc(c.name)}</b>
+        <span class="chg-items">${c.items.map((it) => `<span>${lbl[it.k]} <s>${fmt(it.k, it.from)}</s> → <strong>${fmt(it.k, it.to)}</strong></span>`).join('')}</span>
+      </span>
+    </button>`).join('');
+  const n = ui.changes.filter((c) => c.on).length;
+  return `<h3>Atualizar o treino?</h3>
+    <p>Você mudou carga ou repetições em relação ao treino salvo. Marque o que quer guardar para as próximas vezes.</p>
+    <div class="chg-list">${rows}</div>
+    <div class="sheet-actions">
+      <button class="btn btn-primary" data-a="sheet-pick" data-v="apply" ${n ? '' : 'disabled'}>Atualizar treino${n ? ` (${n})` : ''}</button>
+      <button class="btn btn-secondary" data-a="sheet-pick" data-v="keep">Manter treino como está</button>
+    </div>`;
+}
+function applyPlanChanges(workoutId, changes) {
+  const w = getW(workoutId);
+  if (!w) return;
+  for (const c of changes) {
+    const te = w.exercises.find((x) => x.id === c.id);
+    if (!te) continue;
+    for (const it of c.items) te[it.k] = it.to;
+  }
+  toast('Treino atualizado');
 }
 function discardWorkout() {
   S.active = null;
@@ -985,6 +1073,7 @@ function sanitizeDraft(d) {
     sets: clamp(parseInt(e.sets, 10) || 3, 1, 30),
     reps: e.type === 'reps' ? (parseInt(e.reps, 10) > 0 ? clamp(parseInt(e.reps, 10), 1, 500) : null) : null,
     secs: clamp(parseInt(e.secs, 10) || 60, 5, 3600),
+    kg: num(e.kg) > 0 ? Math.min(num(e.kg), 1000) : null,
   }));
   return d;
 }
@@ -1059,7 +1148,8 @@ const A = {
     if (k === 'sets') e.sets = clamp((parseInt(e.sets, 10) || 0) + d, 1, 30);
     if (k === 'reps') { const v = (parseInt(e.reps, 10) || 0) + d; e.reps = v <= 0 ? null : Math.min(v, 500); }
     if (k === 'secs') e.secs = clamp((e.secs || 60) + d * 15, 5, 3600);
-    if (k === 'rest') e.rest = clamp((e.rest ?? S.settings.restSecs) + d * 15, 0, 600);
+    if (k === 'rest') e.rest = clamp((e.rest ?? S.settings.restSecs) + d * 5, 0, 600);
+    if (k === 'kg') { const v = Math.round(((num(e.kg) || 0) + d) * 10) / 10; e.kg = v <= 0 ? null : Math.min(v, 1000); }
     render();
   },
   restreset: (el) => { dEx(el).rest = null; render(); },
@@ -1148,7 +1238,12 @@ const A = {
     r.total = Math.max(r.total + d, Math.ceil((r.until - Date.now()) / 1000));
     save(); tick();
   },
+  'chg-toggle': (el) => { const c = ui.changes[+el.dataset.i]; c.on = !c.on; updateSheet(changesHTML()); },
   'rest-skip': () => { S.active.rest = null; save(); renderRest(); },
+  restsheet: () => openSheet(restSheetHTML(), () => render()),
+  'rs-toggle': () => { S.settings.restOn = !S.settings.restOn; if (!S.settings.restOn && S.active) { S.active.rest = null; renderRest(); } save(); updateSheet(restSheetHTML()); },
+  'rs-step': (el) => { S.settings.restSecs = clamp(S.settings.restSecs + +el.dataset.d, 10, 600); save(); updateSheet(restSheetHTML()); },
+  'rs-set': (el) => { S.settings.restSecs = +el.dataset.v; save(); updateSheet(restSheetHTML()); },
   togglerest: () => {
     S.settings.restOn = !S.settings.restOn;
     if (!S.settings.restOn && S.active) S.active.rest = null;
@@ -1198,7 +1293,7 @@ const A = {
     if (k === 'vibrate' && S.settings.vibrate && navigator.vibrate) navigator.vibrate(60);
     save(); render();
   },
-  restdefault: (el) => { S.settings.restSecs = clamp(S.settings.restSecs + +el.dataset.d * 15, 15, 600); save(); render(); },
+  restdefault: (el) => { S.settings.restSecs = clamp(S.settings.restSecs + +el.dataset.d * 5, 10, 600); save(); render(); },
   export: async () => {
     const data = { ...S, active: null, backup: undefined, exportedAt: new Date().toISOString() };
     const json = JSON.stringify(data, null, 2);
@@ -1261,6 +1356,7 @@ const F = {
   },
   libq: (el) => { const l = document.getElementById('liblist'); if (l) l.innerHTML = libListHTML(el.value); },
   exnum: (el) => { dEx(el)[el.dataset.k] = el.value.replace(/\D/g, ''); },
+  exkg: (el) => { dEx(el).kg = el.value.replace(/[^\d.,]/g, ''); },
   kg: (el) => { exAt(el).sets[+el.dataset.si].kg = el.value.replace(/[^\d.,]/g, ''); save(); },
   reps: (el) => { exAt(el).sets[+el.dataset.si].reps = el.value.replace(/\D/g, ''); save(); },
 };
